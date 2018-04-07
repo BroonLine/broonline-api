@@ -1,0 +1,46 @@
+{
+  "name": "@broonline/api",
+  "version": "0.1.0",
+  "description": "TODO",
+  "homepage": "https://api.broonline.uk",
+  "bugs": {
+    "url": "https://github.com/BroonLine/broonline-api/issues"
+  },
+  "author": {
+    "name": "Alasdair Mercer",
+    "email": "mercer.alasdair@gmail.com",
+    "url": "https://neocotic.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "broon",
+    "line",
+    "api"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BroonLine/broonline-api.git"
+  },
+  "dependencies": {
+    "compression": "^1.7.2",
+    "dotenv": "^5.0.1",
+    "express": "^4.15.2",
+    "express-validator": "^5.1.1",
+    "fetch-ponyfill": "^6.0.1",
+    "mongoose": "^5.0.13",
+    "morgan": "^1.9.0",
+    "winston": "^2.4.1"
+  },
+  "devDependencies": {
+    "eslint": "^4.19.1",
+    "eslint-config-notninja": "^0.2.3"
+  },
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "eslint \"src/**/*.js\""
+  },
+  "engines": {
+    "node": ">=8"
+  }
+}
