@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (C) 2018 Alasdair Mercer
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,17 +20,36 @@
  * SOFTWARE.
  */
 
+// TODO: Add error handling (ensure API, non-API, async are all covered)
+
 'use strict';
 
-const throng = require('throng');
+const compression = require('compression');
+const express = require('express');
+const morgan = require('morgan');
 
-const concurrency = process.env.WEB_CONCURRENCY || 1;
+const api = require('./api');
+const logger = require('./logger');
+require('./database');
 
-throng({
-  lifetime: Infinity,
-  workers: concurrency
-}, () => {
-  /* eslint-disable global-require */
-  require('./app');
-  /* eslint-enable global-require */
-});
+const port = process.env.PORT || 5000;
+const server = express()
+  .disable('x-powered-by')
+  .use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
+  .use(compression())
+  .use(express.json())
+  .use((req, res, next) => {
+    res.set('Access-Control-Allow-Origin', process.env.WEB_HOST);
+
+    next();
+  })
+  .use('/', api)
+  .listen(port, (err) => {
+    if (err) {
+      logger.error('Failed to start server', err);
+    } else {
+      logger.info('Server started on port %d', port);
+    }
+  });
+
+module.exports = server;
