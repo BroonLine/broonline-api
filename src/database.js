@@ -26,7 +26,7 @@ const mongoose = require('mongoose');
 
 const logger = require('./logger');
 
-mongoose.connect(process.env.MONGOLAB_URI);
+mongoose.connect(process.env.MONGODB_URI);
 
 const db = mongoose.connection;
 db.on('error', (err) => {
