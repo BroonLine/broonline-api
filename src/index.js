@@ -21,7 +21,6 @@
  */
 
 // TODO: Add error handling (ensure API, non-API, async are all covered)
-// TODO: Add CORS
 
 'use strict';
 
@@ -33,7 +32,7 @@ const api = require('./api');
 const logger = require('./logger');
 require('./database');
 
-const port = process.env.PORT || 3001;
+const port = process.env.PORT || 5000;
 const server = express()
   .disable('x-powered-by')
   .use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
