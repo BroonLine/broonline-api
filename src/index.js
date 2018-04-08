@@ -25,12 +25,6 @@
 
 'use strict';
 
-if (process.env.NODE_ENV !== 'production') {
-  /* eslint-disable global-require */
-  require('dotenv').config();
-  /* eslint-enable global-require */
-}
-
 const compression = require('compression');
 const express = require('express');
 const morgan = require('morgan');
