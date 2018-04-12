@@ -29,16 +29,20 @@
     "foreman": "^2.0.0",
     "mongoose": "^5.0.13",
     "morgan": "^1.9.0",
+    "per-env": "^1.0.2",
     "throng": "^4.0.0",
     "winston": "^2.4.1"
   },
   "devDependencies": {
     "eslint": "^4.19.1",
-    "eslint-config-notninja": "^0.2.3"
+    "eslint-config-notninja": "^0.2.3",
+    "nodemon": "^1.17.3"
   },
   "main": "src/index.js",
   "scripts": {
-    "start": "nf start",
+    "start": "per-env",
+    "start:development": "nodemon --watch src --exec \"nf start\"",
+    "start:production": "nf start",
     "test": "eslint \"src/**/*.js\""
   },
   "engines": {
