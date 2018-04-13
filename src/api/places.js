@@ -23,20 +23,18 @@
 'use strict';
 
 const { Router } = require('express');
+const asyncHandler = require('express-async-handler');
 const { check, validationResult } = require('express-validator/check');
 const { matchedData } = require('express-validator/filter');
 
 const Place = require('../models/Place');
-
-// TODO: Improve error handling and security by hiding real errors and standardizing structure
-// TODO: Wrap async handlers for error handling?
 
 const router = Router();
 router.get('/', [
   check('dominant')
     .optional()
     .isIn([ 'no', 'yes' ])
-], async (req, res) => {
+], asyncHandler(async(req, res) => {
   // TODO: Support ability to query for locations within specific region (coord boundaries) to optimize page load
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -50,9 +48,9 @@ router.get('/', [
   return res.json({
     data: { places }
   });
-});
+}));
 
-router.get('/:placeId', async (req, res) => {
+router.get('/:placeId', asyncHandler(async(req, res) => {
   const { placeId } = req.params;
 
   const place = await Place.findById(placeId);
@@ -64,14 +62,14 @@ router.get('/:placeId', async (req, res) => {
   return res.json({
     data: { place }
   });
-});
+}));
 
 router.post('/:placeId/answer', [
   check('answer')
     .isIn([ 'no', 'yes' ]),
   check('position')
     .isLatLong()
-], async (req, res) => {
+], asyncHandler(async(req, res) => {
   const { answer, placeId, position } = req.params;
   const [ latitude, longitude ] = position.split(',');
 
@@ -94,6 +92,6 @@ router.post('/:placeId/answer', [
     .json({
       data: { place }
     });
-});
+}));
 
 module.exports = router;
