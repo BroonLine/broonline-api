@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2018 Alasdair Mercer
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,32 +22,52 @@
 
 'use strict';
 
-const compression = require('compression');
-const express = require('express');
-const morgan = require('morgan');
+// TODO: Externalize and/or contribute to express
 
-const { isProduction, port } = require('./config');
-const logger = require('./logger');
-const { cors, errorHandler, json, notFoundHandler } = require('./middleware');
-const routes = require('./routes');
-require('./database');
+function json(options = {}) {
+  const {
+    skip = () => false,
+    spaces = 2
+  } = options;
 
-const server = express()
-  .disable('x-powered-by')
-  .use(morgan(isProduction() ? 'combined' : 'dev'))
-  .use(compression())
-  .use(express.json())
-  .use(cors())
-  .use(json({ skip: (req) => req.get('origin') }))
-  .use('/', routes)
-  .use(notFoundHandler())
-  .use(errorHandler())
-  .listen(port, (err) => {
-    if (err) {
-      logger.error('Failed to start server', err);
-    } else {
-      logger.info('Server started on port %d', port);
+  return (req, res, next) => {
+    if (!skip(req, res)) {
+      res.json = (obj) => {
+        const { app } = req;
+        const escape = app.get('json escape');
+        const replacer = app.get('json replacer');
+        const body = stringify(obj, replacer, spaces, escape);
+
+        if (!res.get('Content-Type')) {
+          res.set('Content-Type', 'application/json');
+        }
+
+        return res.send(body);
+      };
     }
-  });
 
-module.exports = server;
+    next();
+  };
+}
+
+function stringify(value, replacer, spaces, escape) {
+  let str = replacer || spaces ? JSON.stringify(value, replacer, spaces) : JSON.stringify(value);
+  if (escape) {
+    str = str.replace(/[<>&]/g, (c) => {
+      switch (c.charCodeAt(0)) {
+      case 0x3c:
+        return '\\u003c';
+      case 0x3e:
+        return '\\u003e';
+      case 0x26:
+        return '\\u0026';
+      default:
+        return c;
+      }
+    });
+  }
+
+  return str;
+}
+
+module.exports = json;

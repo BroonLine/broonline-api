@@ -24,10 +24,12 @@
 
 const cors = require('./cors');
 const errorHandler = require('./error-handler');
+const json = require('./json');
 const notFoundHandler = require('./not-found-handler');
 
 module.exports = {
   cors,
   errorHandler,
+  json,
   notFoundHandler
 };
