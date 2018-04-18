@@ -63,7 +63,6 @@ router.get('/:placeId', [
   const { placeId } = req.params;
 
   const result = await places.findById(placeId, options);
-  // TODO: If not found, attempt to lookup from Google Maps and build faux result from it
   if (!result) {
     return next();
   }
@@ -72,24 +71,18 @@ router.get('/:placeId', [
 }));
 
 router.post('/:placeId/answer', [
-  check('position')
-    .isLatLong(),
   check('value')
     .isIn([ 'no', 'yes' ])
 ], asyncHandler(async(req, res, next) => {
-  // TODO: Remove need for position (lookup from Google Maps API if place not already added)
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return withResponse(withErrors({}, errors.array(), 422), res);
   }
 
-  const { position, value } = matchedData(req);
+  const { value } = matchedData(req);
   const { placeId } = req.params;
 
-  const result = await places.addAnswer(placeId, {
-    position: position.split(/,\s*/),
-    value
-  });
+  const result = await places.addAnswer(placeId, { value });
   if (!result) {
     return next();
   }
@@ -107,7 +100,7 @@ router.links = [
     rel: 'get-place'
   },
   {
-    href: '/{placeId}/answer?position={position}&value={value}',
+    href: '/{placeId}/answer?value={value}',
     rel: 'answer-place'
   }
 ];

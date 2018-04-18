@@ -27,32 +27,40 @@ const Place = require('../../models/Place');
 const { withData, withLinks } = require('../../utils/hateoas');
 
 async function addAnswer(placeId, options = {}) {
-  // TODO: Remove need for position (lookup from Google Maps API if place not already added)
-  const latitude = parseFloat(options.position.latitude);
-  const longitude = parseFloat(options.position.longitude);
-
-  let place = await Place.findById(placeId);
-  let status = 200;
+  const place = await findById(placeId);
   if (!place) {
-    place = new Place({
-      _id: placeId,
-      position: {
-        latitude,
-        longitude
-      }
-    });
-    status = 201;
+    return null;
   }
 
   await place.saveAnswer(options.value);
 
   return withData({}, {
-    place: includeLinks(place.toJSON(), { latitude, longitude })
-  }, status);
+    place: includeLinks(place.toJSON())
+  });
 }
 
-async function assignGoogleDetails(placeId, place) {
-  const details = await google.maps.places.findById(placeId);
+function castDetails(details) {
+  if (!details) {
+    return null;
+  }
+
+  const { location } = details.geometry;
+
+  return new Place({
+    _id: details.place_id,
+    dates: {
+      created: null,
+      modified: null
+    },
+    dominant: null,
+    position: {
+      latitude: location.lat,
+      longitude: location.lng
+    }
+  });
+}
+
+function expandWithDetails(place, details) {
   if (!details) {
     return place;
   }
@@ -85,30 +93,35 @@ async function find(options = {}) {
         next: places[index + 1]
       };
 
-      return includeLinks(place.toJSON(), place.position, relations);
+      return includeLinks(place.toJSON(), relations);
     })
   });
 }
 
 async function findById(placeId, options = {}) {
-  const place = await Place.findById(placeId);
-  // TODO: If not found, attempt to lookup from Google Maps and build faux result from it
+  let place = await Place.findById(placeId);
+  const details = !place || options.expand ? await google.maps.places.findById(placeId) : null;
+
   if (!place) {
-    return null;
+    place = castDetails(details);
+
+    if (!place) {
+      return null;
+    }
   }
 
   const data = {
-    place: includeLinks(place.toJSON(), place.position)
+    place: includeLinks(place.toJSON())
   };
+
   if (options.expand) {
-    await assignGoogleDetails(placeId, data.place);
+    expandWithDetails(data.place, details);
   }
 
   return withData({}, data);
 }
 
-function includeLinks(place, position, relations = {}) {
-  const { latitude, longitude } = position;
+function includeLinks(place, relations = {}) {
   const { previous, next } = relations;
   const links = [
     {
@@ -116,8 +129,7 @@ function includeLinks(place, position, relations = {}) {
       rel: 'self'
     },
     {
-      href: `/places/${encodeURIComponent(place.id)}/answer?` +
-      `position=${encodeURIComponent([ latitude, longitude ].join(','))}&value={value}`,
+      href: `/places/${encodeURIComponent(place.id)}/answer?value={value}`,
       rel: 'answer'
     }
   ];

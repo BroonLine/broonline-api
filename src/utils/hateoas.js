@@ -57,7 +57,7 @@ function withLinks(entity, links) {
 
   for (const link of links) {
     entity.links.push({
-      href: `${apiHost}${link.href}`,
+      href: link.href[0] === '/' ? `${apiHost}${link.href}` : link.href,
       rel: link.rel
     });
   }
