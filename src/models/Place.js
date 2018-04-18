@@ -22,7 +22,6 @@
 
 'use strict';
 
-// TODO: Modify JSON serialization & deserialization for cleaner I/O
 // TODO: Improve (migrate) data structure (see below comment)
 /*
  * Goal:
