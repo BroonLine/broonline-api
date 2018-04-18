@@ -79,9 +79,13 @@ async function find(options = {}) {
   const places = await Place.find(options);
 
   return withData({}, {
-    places: places.map((place) => {
-      // TODO: Consider adding previous+next links
-      return includeLinks(place.toJSON());
+    places: places.map((place, index) => {
+      const relations = {
+        previous: places[index - 1],
+        next: places[index + 1]
+      };
+
+      return includeLinks(place.toJSON(), place.position, relations);
     })
   });
 }
@@ -94,7 +98,7 @@ async function findById(placeId, options = {}) {
   }
 
   const data = {
-    place: includeLinks(place.toJSON())
+    place: includeLinks(place.toJSON(), place.position)
   };
   if (options.expand) {
     await assignGoogleDetails(placeId, data.place);
@@ -103,20 +107,35 @@ async function findById(placeId, options = {}) {
   return withData({}, data);
 }
 
-function includeLinks(place, position = place.position) {
+function includeLinks(place, position, relations = {}) {
   const { latitude, longitude } = position;
-
-  return withLinks(place, [
+  const { previous, next } = relations;
+  const links = [
     {
-      href: `/place/${encodeURIComponent(place.id)}{?expand}`,
+      href: `/places/${encodeURIComponent(place.id)}{?expand}`,
       rel: 'self'
     },
     {
-      href: `/place/${encodeURIComponent(place.id)}/answer?` +
-        `position=${encodeURIComponent([ latitude, longitude ].join(','))}&value={value}`,
+      href: `/places/${encodeURIComponent(place.id)}/answer?` +
+      `position=${encodeURIComponent([ latitude, longitude ].join(','))}&value={value}`,
       rel: 'answer'
     }
-  ]);
+  ];
+
+  if (previous) {
+    links.push({
+      href: `/places/${encodeURIComponent(previous.id)}{?expand}`,
+      rel: 'previous'
+    });
+  }
+  if (next) {
+    links.push({
+      href: `/places/${encodeURIComponent(next.id)}{?expand}`,
+      rel: 'next'
+    });
+  }
+
+  return withLinks(place, links);
 }
 
 module.exports = {
