@@ -22,8 +22,6 @@
 
 'use strict';
 
-const url = require('url');
-
 const { apiHost } = require('../config');
 
 function withBody(result, body, status = 200) {
@@ -59,7 +57,7 @@ function withLinks(entity, links) {
 
   for (const link of links) {
     entity.links.push({
-      href: url.resolve(apiHost, link.href),
+      href: `${apiHost}${link.href}`,
       rel: link.rel
     });
   }

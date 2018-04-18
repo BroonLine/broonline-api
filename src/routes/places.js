@@ -31,6 +31,7 @@ const { places } = require('../api/internal');
 const { withErrors, withResponse } = require('../utils/hateoas');
 
 const router = Router();
+
 router.get('/', [
   check('dominant')
     .optional()
@@ -71,10 +72,10 @@ router.get('/:placeId', [
 }));
 
 router.post('/:placeId/answer', [
-  check('answer')
-    .isIn([ 'no', 'yes' ]),
   check('position')
-    .isLatLong()
+    .isLatLong(),
+  check('value')
+    .isIn([ 'no', 'yes' ])
 ], asyncHandler(async(req, res, next) => {
   // TODO: Remove need for position (lookup from Google Maps API if place not already added)
   const errors = validationResult(req);
@@ -82,12 +83,12 @@ router.post('/:placeId/answer', [
     return withResponse(withErrors({}, errors.array(), 422), res);
   }
 
-  const { answer, position } = matchedData(req);
+  const { position, value } = matchedData(req);
   const { placeId } = req.params;
 
   const result = await places.addAnswer(placeId, {
-    answer,
-    position: position.split(/,\s*/)
+    position: position.split(/,\s*/),
+    value
   });
   if (!result) {
     return next();
@@ -95,5 +96,20 @@ router.post('/:placeId/answer', [
 
   return withResponse(result, res);
 }));
+
+router.links = [
+  {
+    href: '/{?dominant}',
+    rel: 'get-places'
+  },
+  {
+    href: '/{placeId}{?expand}',
+    rel: 'get-place'
+  },
+  {
+    href: '/{placeId}/answer?position={position}&value={value}',
+    rel: 'answer-place'
+  }
+];
 
 module.exports = router;

@@ -28,7 +28,8 @@ const { withData, withLinks } = require('../../utils/hateoas');
 
 async function addAnswer(placeId, options = {}) {
   // TODO: Remove need for position (lookup from Google Maps API if place not already added)
-  const [ latitude, longitude ] = options.position;
+  const latitude = parseFloat(options.position.latitude);
+  const longitude = parseFloat(options.position.longitude);
 
   let place = await Place.findById(placeId);
   let status = 200;
@@ -36,23 +37,18 @@ async function addAnswer(placeId, options = {}) {
     place = new Place({
       _id: placeId,
       position: {
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude)
+        latitude,
+        longitude
       }
     });
     status = 201;
   }
 
-  await place.saveAnswer(options.answer);
+  await place.saveAnswer(options.value);
 
-  place = withLinks(place.toJSON(), [
-    {
-      href: `/place/${place.id}`,
-      rel: 'self'
-    }
-  ]);
-
-  return withData({}, { place }, status);
+  return withData({}, {
+    place: includeLinks(place.toJSON(), { latitude, longitude })
+  }, status);
 }
 
 async function assignGoogleDetails(placeId, place) {
@@ -85,12 +81,7 @@ async function find(options = {}) {
   return withData({}, {
     places: places.map((place) => {
       // TODO: Consider adding previous+next links
-      return withLinks(place.toJSON(), [
-        {
-          href: `/place/${place.id}`,
-          rel: 'self'
-        }
-      ]);
+      return includeLinks(place.toJSON());
     })
   });
 }
@@ -103,19 +94,29 @@ async function findById(placeId, options = {}) {
   }
 
   const data = {
-    place: withLinks(place.toJSON(), [
-      {
-        href: `/place/${place.id}`,
-        rel: 'self'
-      }
-    ])
+    place: includeLinks(place.toJSON())
   };
-  // TODO: Augment place with google data
   if (options.expand) {
     await assignGoogleDetails(placeId, data.place);
   }
 
   return withData({}, data);
+}
+
+function includeLinks(place, position = place.position) {
+  const { latitude, longitude } = position;
+
+  return withLinks(place, [
+    {
+      href: `/place/${encodeURIComponent(place.id)}{?expand}`,
+      rel: 'self'
+    },
+    {
+      href: `/place/${encodeURIComponent(place.id)}/answer?` +
+        `position=${encodeURIComponent([ latitude, longitude ].join(','))}&value={value}`,
+      rel: 'answer'
+    }
+  ]);
 }
 
 module.exports = {

@@ -24,9 +24,45 @@
 
 const { Router } = require('express');
 
-const places = require('./places');
+const { withBody, withLinks, withResponse } = require('../utils/hateoas');
 
+const links = [
+  {
+    href: '/',
+    rel: 'self'
+  }
+];
 const router = Router();
-router.use('/places', places);
+router.get('/', (req, res) => {
+  const result = {};
+  withBody(result);
+  withLinks(result, links);
+
+  withResponse(result, res);
+});
+
+function loadRoute(name) {
+  const path = `/${name}`;
+  /* eslint-disable global-require */
+  const route = require(`.${path}`);
+  /* eslint-enable global-require */
+
+  router.use(path, route);
+
+  for (const link of route.links) {
+    links.push({
+      href: `${path}${link.href}`,
+      rel: link.rel
+    });
+  }
+}
+
+function loadRoutes(names) {
+  names.forEach(loadRoute);
+}
+
+loadRoutes([
+  'places'
+]);
 
 module.exports = router;
