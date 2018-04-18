@@ -24,7 +24,7 @@
 
 const throng = require('throng');
 
-const concurrency = process.env.WEB_CONCURRENCY || 1;
+const { concurrency } = require('./config');
 
 throng({
   lifetime: Infinity,

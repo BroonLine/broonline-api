@@ -24,10 +24,12 @@
 
 const winston = require('winston');
 
+const { loggingLevel } = require('./config');
+
 const logger = new winston.Logger({
-  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+  level: loggingLevel,
   transports: [
-    new winston.transports.Console(),
+    new winston.transports.Console()
   ]
 });
 

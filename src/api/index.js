@@ -22,11 +22,10 @@
 
 'use strict';
 
-const { Router } = require('express');
+const external = require('./external');
+const internal = require('./internal');
 
-const places = require('./places');
-
-const router = Router();
-router.use('/places', places);
-
-module.exports = router;
+module.exports = {
+  external,
+  internal
+};

@@ -24,16 +24,13 @@
 
 const mongoose = require('mongoose');
 
+const { mongodbUri } = require('./config');
 const logger = require('./logger');
 
-mongoose.connect(process.env.MONGODB_URI);
+mongoose.connect(mongodbUri);
 
-const db = mongoose.connection;
-db.on('error', (err) => {
-  logger.error('Failed to connect to database', err);
-});
-db.once('open', () => {
-  logger.info('Connected to database');
-});
+const { connection } = mongoose;
+connection.on('error', (err) => logger.error('Failed to connect to database', err));
+connection.once('open', () => logger.info('Connected to database'));
 
-module.exports = db;
+module.exports = connection;

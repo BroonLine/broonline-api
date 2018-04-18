@@ -22,6 +22,17 @@
 
 'use strict';
 
+// TODO: Modify JSON serialization & deserialization for cleaner I/O
+// TODO: Improve (migrate) data structure (see below comment)
+/*
+ * Goal:
+ * answers -> make new schema for answers and change to array of that schema, creating virtuals for summaries
+ * dates.created -> move to "createdAt"
+ * dates.modified -> move to "updatedAt"
+ * dominant -> move to virtual (see "answers" notes)
+ * position -> move to "location" and change to GeoJSON Point
+ */
+
 const mongoose = require('mongoose');
 
 const schema = new mongoose.Schema({
@@ -38,6 +49,16 @@ const schema = new mongoose.Schema({
   position: {
     latitude: { type: Number },
     longitude: { type: Number }
+  }
+}, {
+  toObject: {
+    transform(doc, ret) {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+
+      return ret;
+    }
   }
 });
 

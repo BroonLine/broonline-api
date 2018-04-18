@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2018 Alasdair Mercer
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,31 +22,17 @@
 
 'use strict';
 
-const compression = require('compression');
-const express = require('express');
-const morgan = require('morgan');
+const logger = require('../logger');
+const { withErrors } = require('../utils/respond');
 
-const { isProduction, port } = require('./config');
-const logger = require('./logger');
-const { cors, errorHandler, notFoundHandler } = require('./middleware');
-const routes = require('./routes');
-require('./database');
+function errorHandler(err, req, res, next) {
+  logger.error('An unexpected error occurred', err);
 
-const server = express()
-  .disable('x-powered-by')
-  .use(morgan(isProduction() ? 'combined' : 'dev'))
-  .use(compression())
-  .use(express.json())
-  .use(cors())
-  .use('/', routes)
-  .use(notFoundHandler())
-  .use(errorHandler())
-  .listen(port, (err) => {
-    if (err) {
-      logger.error('Failed to start server', err);
-    } else {
-      logger.info('Server started on port %d', port);
-    }
-  });
+  if (res.headersSent) {
+    return next(err);
+  }
 
-module.exports = server;
+  return withErrors(res, 'Unexpected error');
+}
+
+module.exports = () => errorHandler;

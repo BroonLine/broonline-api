@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2018 Alasdair Mercer
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,31 +22,59 @@
 
 'use strict';
 
-const compression = require('compression');
-const express = require('express');
-const morgan = require('morgan');
+const url = require('url');
 
-const { isProduction, port } = require('./config');
-const logger = require('./logger');
-const { cors, errorHandler, notFoundHandler } = require('./middleware');
-const routes = require('./routes');
-require('./database');
+const { apiHost } = require('../config');
 
-const server = express()
-  .disable('x-powered-by')
-  .use(morgan(isProduction() ? 'combined' : 'dev'))
-  .use(compression())
-  .use(express.json())
-  .use(cors())
-  .use('/', routes)
-  .use(notFoundHandler())
-  .use(errorHandler())
-  .listen(port, (err) => {
-    if (err) {
-      logger.error('Failed to start server', err);
-    } else {
-      logger.info('Server started on port %d', port);
-    }
+function withBody(result, body, status = 200) {
+  return Object.assign(result, { status }, body);
+}
+
+function withData(result, data, status = 200) {
+  return withBody(result, { data }, status);
+}
+
+function withErrors(result, errors, status = 500) {
+  if (!errors) {
+    errors = [];
+  }
+  if (!Array.isArray(errors)) {
+    errors = [ errors ];
+  }
+  errors = errors.map((error) => {
+    return typeof error === 'string' ? { msg: error } : error;
   });
 
-module.exports = server;
+  return withBody(result, { errors }, status);
+}
+
+function withLinks(entity, links) {
+  if (!links) {
+    links = [];
+  }
+
+  if (!entity.links) {
+    entity.links = [];
+  }
+
+  for (const link of links) {
+    entity.links.push({
+      href: url.resolve(apiHost, link.href),
+      rel: link.rel
+    });
+  }
+
+  return entity;
+}
+
+function withResponse(result, response) {
+  return response.status(result.status).json(result);
+}
+
+module.exports = {
+  withBody,
+  withData,
+  withErrors,
+  withLinks,
+  withResponse
+};

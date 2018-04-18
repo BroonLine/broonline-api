@@ -27,7 +27,8 @@ const asyncHandler = require('express-async-handler');
 const { check, validationResult } = require('express-validator/check');
 const { matchedData } = require('express-validator/filter');
 
-const Place = require('../models/Place');
+const { places } = require('../api/internal');
+const { withErrors, withResponse } = require('../utils/hateoas');
 
 const router = Router();
 router.get('/', [
@@ -35,33 +36,38 @@ router.get('/', [
     .optional()
     .isIn([ 'no', 'yes' ])
 ], asyncHandler(async(req, res) => {
-  // TODO: Support ability to query for locations within specific region (coord boundaries) to optimize page load
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400)
-      .json({ errors: errors.array() });
+    return withResponse(withErrors({}, errors.array(), 422), res);
   }
 
-  const params = matchedData(req);
-  const places = await Place.find(params);
+  const options = matchedData(req);
+  const result = await places.find(options);
 
-  return res.json({
-    data: { places }
-  });
+  return withResponse(result, res);
 }));
 
-router.get('/:placeId', asyncHandler(async(req, res) => {
-  const { placeId } = req.params;
-
-  const place = await Place.findById(placeId);
-  if (!place) {
-    return res.status(404)
-      .json({ errors: [ 'Not found!' ] });
+router.get('/:placeId', [
+  check('expand')
+    .optional()
+    .isBoolean()
+    .toBoolean()
+], asyncHandler(async(req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return withResponse(withErrors({}, errors.array(), 422), res);
   }
 
-  return res.json({
-    data: { place }
-  });
+  const options = matchedData(req);
+  const { placeId } = req.params;
+
+  const result = await places.findById(placeId, options);
+  // TODO: If not found, attempt to lookup from Google Maps and build faux result from it
+  if (!result) {
+    return next();
+  }
+
+  return withResponse(result, res);
 }));
 
 router.post('/:placeId/answer', [
@@ -69,29 +75,25 @@ router.post('/:placeId/answer', [
     .isIn([ 'no', 'yes' ]),
   check('position')
     .isLatLong()
-], asyncHandler(async(req, res) => {
-  const { answer, placeId, position } = req.params;
-  const [ latitude, longitude ] = position.split(',');
-
-  let place = await Place.findById(placeId);
-  let status = 200;
-  if (!place) {
-    place = new Place({
-      _id: placeId,
-      position: {
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude)
-      }
-    });
-    status = 201;
+], asyncHandler(async(req, res, next) => {
+  // TODO: Remove need for position (lookup from Google Maps API if place not already added)
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return withResponse(withErrors({}, errors.array(), 422), res);
   }
 
-  await place.saveAnswer(answer);
+  const { answer, position } = matchedData(req);
+  const { placeId } = req.params;
 
-  res.status(status)
-    .json({
-      data: { place }
-    });
+  const result = await places.addAnswer(placeId, {
+    answer,
+    position: position.split(/,\s*/)
+  });
+  if (!result) {
+    return next();
+  }
+
+  return withResponse(result, res);
 }));
 
 module.exports = router;

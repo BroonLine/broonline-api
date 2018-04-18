@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2018 Alasdair Mercer
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -22,31 +22,24 @@
 
 'use strict';
 
-const compression = require('compression');
-const express = require('express');
-const morgan = require('morgan');
+const request = require('request-promise-native');
 
-const { isProduction, port } = require('./config');
-const logger = require('./logger');
-const { cors, errorHandler, notFoundHandler } = require('./middleware');
-const routes = require('./routes');
-require('./database');
+const { googleMapsApiKey } = require('../../../../config');
 
-const server = express()
-  .disable('x-powered-by')
-  .use(morgan(isProduction() ? 'combined' : 'dev'))
-  .use(compression())
-  .use(express.json())
-  .use(cors())
-  .use('/', routes)
-  .use(notFoundHandler())
-  .use(errorHandler())
-  .listen(port, (err) => {
-    if (err) {
-      logger.error('Failed to start server', err);
-    } else {
-      logger.info('Server started on port %d', port);
+async function findById(placeId) {
+  const { result: place } = await request({
+    method: 'GET',
+    url: 'https://maps.googleapis.com/maps/api/place/details/json',
+    json: true,
+    qs: {
+      key: googleMapsApiKey,
+      placeid: placeId
     }
   });
 
-module.exports = server;
+  return place;
+}
+
+module.exports = {
+  findById
+};
