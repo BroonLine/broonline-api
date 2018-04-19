@@ -22,6 +22,8 @@
 
 'use strict';
 
+// TODO: Add sync endpoint to deal with multiple IDs with cron job (don't publish as link - perhaps use secret env var To lock down)
+
 const { Router } = require('express');
 const asyncHandler = require('express-async-handler');
 const { check, validationResult } = require('express-validator/check');
