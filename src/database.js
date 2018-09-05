@@ -27,10 +27,16 @@ const mongoose = require('mongoose');
 const { mongodbUri } = require('./config');
 const logger = require('./logger');
 
+mongoose.set('debug', (collectionName, methodName, ...args) => {
+  logger.log('silly', 'Called MongoDB method db.%s.%s with arguments: %o', collectionName, methodName, args);
+});
+mongoose.set('useCreateIndex', true);
+mongoose.set('useNewUrlParser', true);
+
 mongoose.connect(mongodbUri);
 
 const { connection } = mongoose;
-connection.on('error', (err) => logger.error('Failed to connect to database', err));
-connection.once('open', () => logger.info('Connected to database'));
+connection.on('error', (err) => logger.log('error', 'Failed to connect to database', { error: err }));
+connection.once('open', () => logger.log('info', 'Connected to database'));
 
 module.exports = connection;

@@ -26,7 +26,7 @@ const logger = require('../logger');
 const { builder } = require('../utils/hateoas');
 
 function errorHandler(err, req, res, next) {
-  logger.error('An unexpected error occurred', err);
+  logger.log('error', 'An unexpected error occurred', { error: err });
 
   if (res.headersSent) {
     return next(err);

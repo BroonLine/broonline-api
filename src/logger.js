@@ -22,14 +22,29 @@
 
 'use strict';
 
-const winston = require('winston');
+const { createLogger, format, transports } = require('winston');
 
 const { loggingLevel } = require('./config');
 
-const logger = winston.createLogger({
+const customFormat = format((info) => {
+  const { error } = info;
+  delete info.error;
+
+  return error instanceof Error
+    ? Object.assign({ level: 'error', message: error.message, stack: error.stack }, info)
+    : info;
+});
+
+const logger = createLogger({
   level: loggingLevel,
+  format: format.combine(
+    customFormat(),
+    format.timestamp(),
+    format.splat(),
+    format.json()
+  ),
   transports: [
-    new winston.transports.Console()
+    new transports.Console()
   ]
 });
 

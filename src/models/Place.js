@@ -38,15 +38,14 @@ const pointSchema = new mongoose.Schema({
 
 const schema = new mongoose.Schema({
   _id: { type: String },
-  aliases: { type: [ String ] },
+  aliases: { type: [ String ], index: true },
   answerSummary: {
     false: { type: Number, min: 0, default: 0 },
     true: { type: Number, min: 0, default: 0 },
-    dominant: { type: Boolean, default: null },
+    dominant: { type: Boolean, default: null, index: true },
     total: { type: Number, min: 0, default: 0 }
   },
-  answers: { type: [ answerSchema ] },
-  // TODO: Is special indexing required to help findWithinBounds?
+  answers: { type: [ answerSchema ], select: false },
   position: { type: pointSchema, required: true },
   created: {
     date: { type: Date, default: Date.now }
@@ -57,27 +56,27 @@ const schema = new mongoose.Schema({
 }, {
   toObject: {
     transform(doc, ret) {
-      return {
+      const result = {
         id: ret._id,
         aliases: ret.aliases,
         answerSummary: ret.answerSummary,
-        answers: ret.answers,
         position: ret.position.coordinates,
         created: ret.created,
         modified: ret.modified
       };
+
+      if (ret.answers != null) {
+        result.answers = ret.answers;
+      }
+
+      return result;
     }
   }
 });
 
 schema.query.withinBounds = function(bounds) {
-  return this.where({
-    position: {
-      $geoWithin: {
-        $geometry: convertBoundsToPolygon(bounds)
-      }
-    }
-  });
+  return this.where('position')
+    .within(convertBoundsToPolygon(bounds));
 };
 
 schema.method('addAnswer', function(answer, callback) {

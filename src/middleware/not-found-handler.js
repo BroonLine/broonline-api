@@ -26,7 +26,7 @@ const logger = require('../logger');
 const { builder } = require('../utils/hateoas');
 
 function notFoundHandler(req, res) {
-  logger.warn('Could not locate resource: %s', req.url);
+  logger.log('warn', 'Could not locate resource: %s', req.url);
 
   const result = builder()
     .errors('Not found')

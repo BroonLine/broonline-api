@@ -40,7 +40,7 @@ async function addAnswer(placeId, answer) {
     .build();
 }
 
-function castDetails(details) {
+function castDetails(details, options) {
   if (!details) {
     return null;
   }
@@ -49,6 +49,7 @@ function castDetails(details) {
 
   return new Place({
     _id: details.place_id,
+    answers: options.expand ? [] : null,
     position: {
       type: 'Point',
       coordinates: [
@@ -90,11 +91,11 @@ async function find(options = {}) {
 }
 
 async function findById(placeId, options = {}) {
-  let place = await Place.findById(placeId);
+  let place = await findByIdOrAlias(placeId, options);
   const details = !place || options.expand ? await google.maps.places.findById(placeId) : null;
 
   if (!place) {
-    place = castDetails(details);
+    place = castDetails(details, options);
 
     if (!place) {
       return null;
@@ -114,11 +115,20 @@ async function findById(placeId, options = {}) {
       b.links([
         {
           href: details.url,
-          rel: 'open'
+          rel: 'open-place'
         }
       ]);
     })
     .build();
+}
+
+async function findByIdOrAlias(placeId, options = {}) {
+  let place = await Place.findById(placeId, options.expand ? '+answers' : '');
+  if (!place) {
+    place = await Place.findOne({ aliases: placeId }, options.expand ? '+answers' : '');
+  }
+
+  return place;
 }
 
 function getPlaceLinks(place, relations = {}) {

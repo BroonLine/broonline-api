@@ -34,6 +34,7 @@ require('./database');
 
 const server = express()
   .disable('x-powered-by')
+  // TODO: Determine how to write morgan logs via winston
   .use(morgan(isProduction() ? 'combined' : 'dev'))
   .use(compression())
   .use(express.json())
@@ -44,9 +45,9 @@ const server = express()
   .use(errorHandler())
   .listen(port, (err) => {
     if (err) {
-      logger.error('Failed to start server', err);
+      logger.log('error', 'Failed to start server', { error: err });
     } else {
-      logger.info('Server started on port %d', port);
+      logger.log('info', 'Server started on port: %d', port);
     }
   });
 
