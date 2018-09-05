@@ -39,6 +39,7 @@ const server = express()
   .use(compression())
   .use(express.json())
   .use(cors())
+  // TODO: Fix as this also seems to skip non-browser traffic
   .use(json({ skip: (req) => req.get('origin') }))
   .use('/', routes)
   .use(notFoundHandler())
