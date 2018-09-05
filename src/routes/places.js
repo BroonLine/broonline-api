@@ -124,7 +124,7 @@ router.post('/:placeId/answers', [
 
 router.links = [
   {
-    href: '/{?bounds,dominant}',
+    href: '{?bounds,dominant}',
     rel: 'get-places'
   },
   {
