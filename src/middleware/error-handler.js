@@ -23,7 +23,7 @@
 'use strict';
 
 const logger = require('../logger');
-const { withErrors, withResponse } = require('../utils/hateoas');
+const { builder } = require('../utils/hateoas');
 
 function errorHandler(err, req, res, next) {
   logger.error('An unexpected error occurred', err);
@@ -32,10 +32,12 @@ function errorHandler(err, req, res, next) {
     return next(err);
   }
 
-  const result = {};
-  withErrors(result, 'Unexpected error');
+  const result = builder()
+    .errors('Unexpected error')
+    .build();
 
-  return withResponse(result, res);
+  return res.status(500)
+    .json(result);
 }
 
 module.exports = () => errorHandler;

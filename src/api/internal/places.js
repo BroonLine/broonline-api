@@ -24,19 +24,20 @@
 
 const { google } = require('../external');
 const Place = require('../../models/Place');
-const { withData, withLinks } = require('../../utils/hateoas');
+const { builder } = require('../../utils/hateoas');
 
-async function addAnswer(placeId, options = {}) {
+async function addAnswer(placeId, answer) {
   const place = await findById(placeId);
   if (!place) {
     return null;
   }
 
-  await place.saveAnswer(options.value);
+  await place.addAnswer(answer);
 
-  return withData({}, {
-    place: includeLinks(place.toJSON())
-  });
+  return builder()
+    .body(place.toJSON())
+    .links(getPlaceLinks(place))
+    .build();
 }
 
 function castDetails(details) {
@@ -48,54 +49,44 @@ function castDetails(details) {
 
   return new Place({
     _id: details.place_id,
-    dates: {
-      created: null,
-      modified: null
-    },
-    dominant: null,
     position: {
-      latitude: location.lat,
-      longitude: location.lng
+      type: 'Point',
+      coordinates: [
+        location.lat,
+        location.lng
+      ]
+    },
+    created: {
+      date: null
+    },
+    modified: {
+      date: null
     }
   });
-}
-
-function expandWithDetails(place, details) {
-  if (!details) {
-    return place;
-  }
-
-  Object.assign(place, {
-    address: details.formatted_address,
-    name: details.name,
-    phoneNumber: details.formatted_phone_number,
-    rating: details.rating
-  });
-
-  withLinks(place, [
-    {
-      href: details.url,
-      rel: 'map'
-    }
-  ]);
-
-  return place;
 }
 
 async function find(options = {}) {
-  // TODO: Support ability to query for locations within specific region (coord boundaries) to optimize page load
-  const places = await Place.find(options);
+  let query = Place.find();
+  if (options.bounds) {
+    query = query.withinBounds(options.bounds);
+  }
 
-  return withData({}, {
-    places: places.map((place, index) => {
-      const relations = {
-        previous: places[index - 1],
-        next: places[index + 1]
-      };
+  const places = await query;
 
-      return includeLinks(place.toJSON(), relations);
+  return builder()
+    .body({
+      content: places.map((place, index) => {
+        return builder()
+          .body(place.toJSON())
+          .links(getPlaceLinks(place, {
+            previous: places[index - 1],
+            next: places[index + 1]
+          }))
+          .build();
+      })
     })
-  });
+    .links(getPlacesLinks())
+    .build();
 }
 
 async function findById(placeId, options = {}) {
@@ -110,18 +101,27 @@ async function findById(placeId, options = {}) {
     }
   }
 
-  const data = {
-    place: includeLinks(place.toJSON())
-  };
-
-  if (options.expand) {
-    expandWithDetails(data.place, details);
-  }
-
-  return withData({}, data);
+  return builder()
+    .body(place.toJSON())
+    .links(getPlaceLinks(place))
+    .when(options.expand && details, (b) => {
+      b.body({
+        address: details.formatted_address,
+        name: details.name,
+        phoneNumber: details.formatted_phone_number,
+        rating: details.rating
+      });
+      b.links([
+        {
+          href: details.url,
+          rel: 'open'
+        }
+      ]);
+    })
+    .build();
 }
 
-function includeLinks(place, relations = {}) {
+function getPlaceLinks(place, relations = {}) {
   const { previous, next } = relations;
   const links = [
     {
@@ -129,8 +129,8 @@ function includeLinks(place, relations = {}) {
       rel: 'self'
     },
     {
-      href: `/places/${encodeURIComponent(place.id)}/answer?value={value}`,
-      rel: 'answer'
+      href: `/places/${encodeURIComponent(place.id)}/answers`,
+      rel: 'add-answer'
     }
   ];
 
@@ -147,7 +147,16 @@ function includeLinks(place, relations = {}) {
     });
   }
 
-  return withLinks(place, links);
+  return links;
+}
+
+function getPlacesLinks() {
+  return [
+    {
+      href: '/places{?bounds}',
+      rel: 'self'
+    }
+  ];
 }
 
 module.exports = {

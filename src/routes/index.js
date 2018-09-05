@@ -24,21 +24,22 @@
 
 const { Router } = require('express');
 
-const { withBody, withLinks, withResponse } = require('../utils/hateoas');
+const { builder } = require('../utils/hateoas');
 
 const links = [
   {
-    href: '/',
+    href: '',
     rel: 'self'
   }
 ];
 const router = Router();
 router.get('/', (req, res) => {
-  const result = {};
-  withBody(result);
-  withLinks(result, links);
+  const result = builder()
+    .links(links)
+    .build();
 
-  withResponse(result, res);
+  return res.status(200)
+    .json(result);
 });
 
 function loadRoute(name) {

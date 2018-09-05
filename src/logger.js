@@ -26,7 +26,7 @@ const winston = require('winston');
 
 const { loggingLevel } = require('./config');
 
-const logger = new winston.Logger({
+const logger = winston.createLogger({
   level: loggingLevel,
   transports: [
     new winston.transports.Console()

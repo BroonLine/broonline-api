@@ -26,39 +26,57 @@
 
 const { Router } = require('express');
 const asyncHandler = require('express-async-handler');
-const { check, validationResult } = require('express-validator/check');
-const { matchedData } = require('express-validator/filter');
+const { body: checkBody, query: checkQuery, validationResult } = require('express-validator/check');
+const { matchedData, sanitizeQuery } = require('express-validator/filter');
 
 const { places } = require('../api/internal');
-const { withErrors, withResponse } = require('../utils/hateoas');
+const { builder } = require('../utils/hateoas');
 
 const router = Router();
 
 router.get('/', [
-  check('dominant')
+  checkQuery('bounds')
     .optional()
-    .isIn([ 'no', 'yes' ])
+    .custom((value) => {
+      validateCoordinates(value.ne, 'ne');
+      validateCoordinates(value.sw, 'sw');
+
+      return true;
+    }),
+  sanitizeQuery('bounds.*.*')
+    .toFloat()
 ], asyncHandler(async(req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return withResponse(withErrors({}, errors.array(), 422), res);
+    const result = builder()
+      .errors(errors.array())
+      .build();
+
+    return res.status(422)
+      .json(result);
   }
 
   const options = matchedData(req);
   const result = await places.find(options);
 
-  return withResponse(result, res);
+  return res.status(200)
+    .json(result);
 }));
 
 router.get('/:placeId', [
-  check('expand')
+  checkQuery('expand')
     .optional()
     .isBoolean()
     .toBoolean()
 ], asyncHandler(async(req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return withResponse(withErrors({}, errors.array(), 422), res);
+    const result = builder()
+      .errors(errors.array())
+      .build();
+
+    return res.status(422)
+      .json(result);
   }
 
   const options = matchedData(req);
@@ -69,32 +87,40 @@ router.get('/:placeId', [
     return next();
   }
 
-  return withResponse(result, res);
+  return res.status(200)
+    .json(result);
 }));
 
-router.post('/:placeId/answer', [
-  check('value')
-    .isIn([ 'no', 'yes' ])
+router.post('/:placeId/answers', [
+  checkBody('answer')
+    .isBoolean()
+    .toBoolean()
 ], asyncHandler(async(req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return withResponse(withErrors({}, errors.array(), 422), res);
+    const result = builder()
+      .errors(errors.array())
+      .build();
+
+    return res.status(422)
+      .json(result);
   }
 
-  const { value } = matchedData(req);
+  const { answer } = matchedData(req);
   const { placeId } = req.params;
 
-  const result = await places.addAnswer(placeId, { value });
+  const result = await places.addAnswer(placeId, answer);
   if (!result) {
     return next();
   }
 
-  return withResponse(result, res);
+  return res.status(201)
+    .json(result);
 }));
 
 router.links = [
   {
-    href: '/{?dominant}',
+    href: '/{?bounds}',
     rel: 'get-places'
   },
   {
@@ -102,9 +128,26 @@ router.links = [
     rel: 'get-place'
   },
   {
-    href: '/{placeId}/answer?value={value}',
-    rel: 'answer-place'
+    href: '/{placeId}/answers',
+    rel: 'add-answer'
   }
 ];
+
+function validateCoordinates(coordinates, name) {
+  if (!Array.isArray(coordinates)) {
+    throw new Error(`Invalid coordinate array for "${name}"`);
+  }
+  if (coordinates.length !== 2) {
+    throw new Error(`Missing latitude and longitude coordinates for "${name}"`);
+  }
+
+  coordinates.forEach((coordinate, i) => {
+    if (Number.isNaN(parseFloat(coordinate))) {
+      const property = i === 0 ? 'latitude' : 'longitude';
+
+      throw new Error(`Invalid ${property} coordinate for "${name}"`);
+    }
+  });
+}
 
 module.exports = router;

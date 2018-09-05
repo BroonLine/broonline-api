@@ -23,15 +23,17 @@
 'use strict';
 
 const logger = require('../logger');
-const { withErrors, withResponse } = require('../utils/hateoas');
+const { builder } = require('../utils/hateoas');
 
 function notFoundHandler(req, res) {
   logger.warn('Could not locate resource: %s', req.url);
 
-  const result = {};
-  withErrors(result, 'Not found', 404);
+  const result = builder()
+    .errors('Not found')
+    .build();
 
-  return withResponse(result, res);
+  return res.status(404)
+    .json(result);
 }
 
 module.exports = () => notFoundHandler;

@@ -24,55 +24,89 @@
 
 const { apiHost } = require('../config');
 
-function withBody(result, body, status = 200) {
-  return Object.assign(result, { status }, body);
-}
+const _body = Symbol('body');
+const _errors = Symbol('errors');
+const _links = Symbol('links');
 
-function withData(result, data, status = 200) {
-  return withBody(result, { data }, status);
-}
+class Builder {
 
-function withErrors(result, errors, status = 500) {
-  if (!errors) {
-    errors = [];
-  }
-  if (!Array.isArray(errors)) {
-    errors = [ errors ];
-  }
-  errors = errors.map((error) => {
-    return typeof error === 'string' ? { msg: error } : error;
-  });
-
-  return withBody(result, { errors }, status);
-}
-
-function withLinks(entity, links) {
-  if (!links) {
-    links = [];
+  constructor() {
+    this[_body] = {};
+    this[_errors] = [];
+    this[_links] = [];
   }
 
-  if (!entity.links) {
-    entity.links = [];
+  body(body) {
+    this[_body] = Object.assign({}, this[_body], body);
+
+    return this;
   }
 
-  for (const link of links) {
-    entity.links.push({
-      href: link.href[0] === '/' ? `${apiHost}${link.href}` : link.href,
-      rel: link.rel
+  errors(errors) {
+    if (!errors) {
+      errors = [];
+    }
+    if (!Array.isArray(errors)) {
+      errors = [ errors ];
+    }
+
+    errors = errors.map((error) => {
+      return typeof error === 'string' ? { msg: error } : error;
     });
+
+    this[_errors] = this[_errors].concat(errors);
+
+    return this;
   }
 
-  return entity;
+  links(links) {
+    if (!links) {
+      links = [];
+    }
+    if (!Array.isArray(links)) {
+      links = [ links ];
+    }
+
+    links = links.map((link) => {
+      return {
+        href: !link.href || link.href[0] === '/' ? `${apiHost}${link.href}` : link.href,
+        rel: link.rel
+      };
+    });
+
+    this[_links] = this[_links].concat(links);
+
+    return this;
+  }
+
+  when(expression, func) {
+    if (expression) {
+      func(this);
+    }
+
+    return this;
+  }
+
+  build() {
+    const result = Object.assign({}, this[_body]);
+
+    if (this[_errors].length) {
+      result.errors = this[_errors].slice();
+    }
+
+    if (this[_links].length) {
+      result.links = this[_links].slice();
+    }
+
+    return result;
+  }
+
 }
 
-function withResponse(result, response) {
-  return response.status(result.status).json(result);
+function builder() {
+  return new Builder();
 }
 
 module.exports = {
-  withBody,
-  withData,
-  withErrors,
-  withLinks,
-  withResponse
+  builder
 };
