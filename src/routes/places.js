@@ -43,6 +43,10 @@ router.get('/', [
 
       return true;
     }),
+  checkQuery('dominant')
+    .optional()
+    .isBoolean()
+    .toBoolean(),
   sanitizeQuery('bounds.*.*')
     .toFloat()
 ], asyncHandler(async(req, res) => {
@@ -120,7 +124,7 @@ router.post('/:placeId/answers', [
 
 router.links = [
   {
-    href: '/{?bounds}',
+    href: '/{?bounds,dominant}',
     rel: 'get-places'
   },
   {

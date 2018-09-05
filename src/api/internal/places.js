@@ -40,6 +40,22 @@ async function addAnswer(placeId, answer) {
     .build();
 }
 
+function convertBoundsToPolygon(bounds) {
+  const [ x2, y1 ] = bounds.ne;
+  const [ x1, y2 ] = bounds.sw;
+
+  return {
+    type: 'Polygon',
+    coordinates: [[
+      [ x1, y1 ],
+      [ x1, y2 ],
+      [ x2, y2 ],
+      [ x2, y1 ],
+      [ x1, y1 ]
+    ]]
+  };
+}
+
 function castDetails(details, options) {
   if (!details) {
     return null;
@@ -69,7 +85,12 @@ function castDetails(details, options) {
 async function find(options = {}) {
   let query = Place.find();
   if (options.bounds) {
-    query = query.withinBounds(options.bounds);
+    query = query.where('position')
+      .within(convertBoundsToPolygon(options.bounds));
+  }
+  if (typeof options.dominant !== 'undefined') {
+    query = query.where('answerSummary.dominant')
+      .equals(options.dominant);
   }
 
   const places = await query;
@@ -163,7 +184,7 @@ function getPlaceLinks(place, relations = {}) {
 function getPlacesLinks() {
   return [
     {
-      href: '/places{?bounds}',
+      href: '/places{?bounds,dominant}',
       rel: 'self'
     }
   ];

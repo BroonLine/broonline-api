@@ -74,11 +74,6 @@ const schema = new mongoose.Schema({
   }
 });
 
-schema.query.withinBounds = function(bounds) {
-  return this.where('position')
-    .within(convertBoundsToPolygon(bounds));
-};
-
 schema.method('addAnswer', function(answer, callback) {
   this.answers.push({
     answer,
@@ -115,22 +110,6 @@ function createAnswerSummary(place) {
   result.total = result.false + result.true;
 
   return result;
-}
-
-function convertBoundsToPolygon(bounds) {
-  const [ x2, y1 ] = bounds.ne;
-  const [ x1, y2 ] = bounds.sw;
-
-  return {
-    type: 'Polygon',
-    coordinates: [[
-      [ x1, y1 ],
-      [ x1, y2 ],
-      [ x2, y2 ],
-      [ x2, y1 ],
-      [ x1, y1 ]
-    ]]
-  };
 }
 
 function getDominantAnswer(falseCount, trueCount) {
