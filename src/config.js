@@ -23,19 +23,20 @@
 'use strict';
 
 const apiHost = envVar('API_HOST');
-const concurrency = envVar('WEB_CONCURRENCY', parseNumber, 1);
+const concurrency = envVar('WEB_CONCURRENCY', parseIntNullable, 1);
 const googleMapsApiKey = envVar('GOOGLE_MAPS_API_KEY');
 const loggingLevel = envVar('LOGGING_LEVEL', null, 'info');
 const mongodbUri = envVar('MONGODB_URI');
 const nodeEnv = envVar('NODE_ENV', null, 'development');
-const port = envVar('PORT', parseNumber, 5000);
+const port = envVar('PORT', parseIntNullable, 5000);
+const statsCacheTtl = envVar('STATS_CACHE_TTL', parseIntNullable, 180);
 const webHost = envVar('WEB_HOST');
 
 function envVar(name, parser, defaultValue) {
   const rawValue = process.env[name];
   if (rawValue == null) {
     if (defaultValue == null) {
-      throw new Error(`Missing "${name}" configuration`);
+      throw new Error(`Missing required configuration: "${name}`);
     }
 
     return defaultValue;
@@ -44,7 +45,7 @@ function envVar(name, parser, defaultValue) {
   const parsedValue = parser ? parser(rawValue) : rawValue;
   if (parsedValue == null) {
     if (defaultValue == null) {
-      throw new Error(`Malformed "${name}" configuration: ${rawValue}`);
+      throw new Error(`Malformed configuration: "${name}" -> "${rawValue}"`);
     }
 
     return defaultValue;
@@ -57,7 +58,7 @@ function isProduction() {
   return nodeEnv === 'production';
 }
 
-function parseNumber(value) {
+function parseIntNullable(value) {
   const parsedValue = parseInt(value, 10);
   if (Number.isNaN(parsedValue)) {
     return null;
@@ -74,5 +75,6 @@ module.exports = {
   loggingLevel,
   mongodbUri,
   port,
+  statsCacheTtl,
   webHost
 };

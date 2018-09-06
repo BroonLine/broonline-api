@@ -22,37 +22,15 @@
 
 'use strict';
 
-const Cache = require('node-cache');
-const { Router } = require('express');
-const asyncHandler = require('express-async-handler');
-
-const { stats } = require('../api/internal');
-const { calculateMaxAge } = require('../utils/cache');
-const { statsCacheTtl } = require('../config');
-
-const cache = new Cache({ stdTTL: statsCacheTtl });
-const router = Router();
-
-router.get('/', asyncHandler(async(req, res) => {
-  const cacheKey = 'stats';
-  let result = cache.get(cacheKey);
-  if (!result) {
-    result = await stats.get();
-
-    cache.set(cacheKey, result);
+function calculateMaxAge(cache, key) {
+  const ttl = cache.getTtl(key) || 0;
+  if (!ttl) {
+    return 0;
   }
 
-  res.header('Cache-Control', `max-age=${calculateMaxAge(cache, cacheKey)}`);
+  return ((ttl - Date.now()) / 1000).toFixed();
+}
 
-  return res.status(200)
-    .json(result);
-}));
-
-router.links = [
-  {
-    href: '',
-    rel: 'get-stats'
-  }
-];
-
-module.exports = router;
+module.exports = {
+  calculateMaxAge
+};
