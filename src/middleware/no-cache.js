@@ -22,34 +22,10 @@
 
 'use strict';
 
-const compression = require('compression');
-const express = require('express');
+function noCache(req, res, next) {
+  res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
 
-const { isProduction, port } = require('./config');
-const { getLogger } = require('./logger');
-const { cors, errorHandler, noCache, notFoundHandler, requestLogger } = require('./middleware');
-const routes = require('./routes');
-require('./database');
+  next();
+}
 
-const logger = getLogger();
-
-const app = express()
-  .set('json spaces', isProduction() ? 0 : 2)
-  .disable('x-powered-by')
-  .use(requestLogger())
-  .use(compression())
-  .use(express.json())
-  .use(cors())
-  .use(noCache())
-  .use('/', routes)
-  .use(notFoundHandler())
-  .use(errorHandler())
-  .listen(port, (err) => {
-    if (err) {
-      logger.log('error', 'Failed to start server', { error: err });
-    } else {
-      logger.log('info', 'Server started on port: %d', port);
-    }
-  });
-
-module.exports = app;
+module.exports = () => noCache;
