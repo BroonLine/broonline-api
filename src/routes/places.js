@@ -31,6 +31,7 @@ const { matchedData, sanitizeQuery } = require('express-validator/filter');
 
 const { places } = require('../api/internal');
 const { builder } = require('../utils/hateoas');
+const { isBoolean, toBoolean } = require('../validators');
 
 const router = Router();
 
@@ -45,8 +46,8 @@ router.get('/', [
     }),
   checkQuery('dominant')
     .optional()
-    .isBoolean()
-    .toBoolean(),
+    .custom((value) => isBoolean(value, { nullable: true }))
+    .customSanitizer((value) => toBoolean(value, { nullable: true })),
   checkQuery('status')
     .optional()
     .isIn([ 'ACTIVE' ]),
