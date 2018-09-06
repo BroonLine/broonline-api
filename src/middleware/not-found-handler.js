@@ -22,8 +22,10 @@
 
 'use strict';
 
-const logger = require('../logger');
+const { getLogger } = require('../logger');
 const { builder } = require('../utils/hateoas');
+
+const logger = getLogger();
 
 function notFoundHandler(req, res) {
   logger.log('warn', 'Could not locate resource: %s', req.url);

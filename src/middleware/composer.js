@@ -22,24 +22,20 @@
 
 'use strict';
 
-const { getLogger } = require('../logger');
-const { builder } = require('../utils/hateoas');
-
-const logger = getLogger();
-
-function errorHandler(err, req, res, next) {
-  logger.log('error', 'An unexpected error occurred', { error: err });
-
-  if (res.headersSent) {
-    return next(err);
-  }
-
-  const result = builder()
-    .errors('Unexpected error')
-    .build();
-
-  return res.status(500)
-    .json(result);
+function compose(funcs) {
+  return funcs.reduce((a, b) => {
+    return (req, res, next) => {
+      a(req, res, (err) => {
+        if (err) {
+          next(err);
+        } else {
+          b(req, res, next);
+        }
+      });
+    };
+  });
 }
 
-module.exports = () => errorHandler;
+module.exports = {
+  compose
+};

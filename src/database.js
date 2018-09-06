@@ -25,10 +25,13 @@
 const mongoose = require('mongoose');
 
 const { mongodbUri } = require('./config');
-const logger = require('./logger');
+const { getLogger } = require('./logger');
+
+const dbLogger = getLogger('db');
+const logger = getLogger();
 
 mongoose.set('debug', (collectionName, methodName, ...args) => {
-  logger.log('silly', 'Called MongoDB method db.%s.%s with arguments: %o', collectionName, methodName, args);
+  dbLogger.log('verbose', 'db.%s.%s(%o...)', collectionName, methodName, args);
 });
 mongoose.set('useCreateIndex', true);
 mongoose.set('useNewUrlParser', true);

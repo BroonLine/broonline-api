@@ -25,9 +25,11 @@
 const cors = require('./cors');
 const errorHandler = require('./error-handler');
 const notFoundHandler = require('./not-found-handler');
+const requestLogger = require('./request-logger');
 
 module.exports = {
   cors,
   errorHandler,
-  notFoundHandler
+  notFoundHandler,
+  requestLogger
 };

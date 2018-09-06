@@ -24,19 +24,19 @@
 
 const compression = require('compression');
 const express = require('express');
-const morgan = require('morgan');
 
 const { isProduction, port } = require('./config');
-const logger = require('./logger');
-const { cors, errorHandler, notFoundHandler } = require('./middleware');
+const { getLogger } = require('./logger');
+const { cors, errorHandler, notFoundHandler, requestLogger } = require('./middleware');
 const routes = require('./routes');
 require('./database');
+
+const logger = getLogger();
 
 const app = express()
   .set('json spaces', isProduction() ? 0 : 2)
   .disable('x-powered-by')
-  // TODO: Determine how to write morgan logs via winston
-  .use(morgan(isProduction() ? 'combined' : 'dev'))
+  .use(requestLogger())
   .use(compression())
   .use(express.json())
   .use(cors())

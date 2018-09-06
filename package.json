@@ -32,6 +32,7 @@
     "per-env": "^1.0.2",
     "request": "^2.88.0",
     "request-promise-native": "^1.0.5",
+    "split": "^1.0.1",
     "throng": "^4.0.0",
     "winston": "^3.1.0"
   },

@@ -25,7 +25,7 @@
 const apiHost = envVar('API_HOST');
 const concurrency = envVar('WEB_CONCURRENCY', parseNumber, 1);
 const googleMapsApiKey = envVar('GOOGLE_MAPS_API_KEY');
-const loggingLevel = envVar('LOGGING_LEVEL', null, 'debug');
+const loggingLevel = envVar('LOGGING_LEVEL', null, 'info');
 const mongodbUri = envVar('MONGODB_URI');
 const nodeEnv = envVar('NODE_ENV', null, 'development');
 const port = envVar('PORT', parseNumber, 5000);

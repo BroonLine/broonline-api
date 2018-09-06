@@ -22,24 +22,21 @@
 
 'use strict';
 
+const morgan = require('morgan');
+const split = require('split');
+
+const { compose } = require('./composer');
 const { getLogger } = require('../logger');
-const { builder } = require('../utils/hateoas');
 
-const logger = getLogger();
+const logger = getLogger('http');
 
-function errorHandler(err, req, res, next) {
-  logger.log('error', 'An unexpected error occurred', { error: err });
-
-  if (res.headersSent) {
-    return next(err);
-  }
-
-  const result = builder()
-    .errors('Unexpected error')
-    .build();
-
-  return res.status(500)
-    .json(result);
-}
-
-module.exports = () => errorHandler;
+module.exports = () => compose([
+  morgan('combined', {
+    skip: (req, res) => res.statusCode >= 400,
+    stream: split().on('data', (data) => logger.log('verbose', data))
+  }),
+  morgan('combined', {
+    skip: (req, res) => res.statusCode < 400,
+    stream: split().on('data', (data) => logger.log('warn', data))
+  })
+]);

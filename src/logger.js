@@ -26,6 +26,8 @@ const { createLogger, format, transports } = require('winston');
 
 const { loggingLevel } = require('./config');
 
+const loggers = new Map();
+
 const customFormat = format((info) => {
   const { error } = info;
   delete info.error;
@@ -35,17 +37,30 @@ const customFormat = format((info) => {
     : info;
 });
 
-const logger = createLogger({
-  level: loggingLevel,
-  format: format.combine(
-    customFormat(),
-    format.timestamp(),
-    format.splat(),
-    format.json()
-  ),
-  transports: [
-    new transports.Console()
-  ]
-});
+function getLogger(label = 'main') {
+  if (loggers.has(label)) {
+    return loggers.get(label);
+  }
 
-module.exports = logger;
+  const logger = createLogger({
+    level: loggingLevel,
+    format: format.combine(
+      customFormat(),
+      format.timestamp(),
+      format.splat(),
+      format.label({ label }),
+      format.json()
+    ),
+    transports: [
+      new transports.Console()
+    ]
+  });
+
+  loggers.set(label, logger);
+
+  return logger;
+}
+
+module.exports = {
+  getLogger
+};
