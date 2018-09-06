@@ -24,6 +24,8 @@
 
 const mongoose = require('mongoose');
 
+const { summarize } = require('../utils/answers');
+
 const answerSchema = new mongoose.Schema({
   answer: { type: Boolean, required: true },
   created: {
@@ -86,38 +88,12 @@ schema.method('addAnswer', function(answer, callback) {
 });
 
 schema.pre('save', function(next) {
-  this.answerSummary = createAnswerSummary(this);
+  this.answerSummary = summarize(this.answers);
   this.modified.date = Date.now();
 
   next();
 });
 
 const Place = mongoose.model('Place', schema);
-
-function createAnswerSummary(place) {
-  const result = {
-    false: 0,
-    true: 0
-  };
-
-  place.answers.forEach((answer) => {
-    const field = answer.answer ? 'true' : 'false';
-
-    result[field]++;
-  });
-
-  result.dominant = getDominantAnswer(result.false, result.true);
-  result.total = result.false + result.true;
-
-  return result;
-}
-
-function getDominantAnswer(falseCount, trueCount) {
-  if (falseCount === trueCount) {
-    return null;
-  }
-
-  return trueCount > falseCount;
-}
 
 module.exports = Place;

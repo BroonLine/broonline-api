@@ -25,6 +25,7 @@
 const { google } = require('../external');
 const Place = require('../../models/Place');
 const { builder } = require('../../utils/hateoas');
+const { calculateDominant } = require('../../utils/answers');
 
 async function addAnswer(placeId, answer) {
   const place = await findById(placeId);
@@ -190,8 +191,32 @@ function getPlacesLinks() {
   ];
 }
 
+async function getStats() {
+  const answers =  {
+    false: 0,
+    true: 0
+  };
+  let total = 0;
+
+  await Place.find().cursor().eachAsync((place) => {
+    answers.false += place.answerSummary.false;
+    answers.true += place.answerSummary.true;
+
+    total++;
+  });
+
+  answers.dominant = calculateDominant(answers.false, answers.true);
+  answers.total = answers.false + answers.true;
+
+  return {
+    answers,
+    total
+  };
+}
+
 module.exports = {
   addAnswer,
   find,
-  findById
+  findById,
+  getStats
 };

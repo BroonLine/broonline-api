@@ -63,7 +63,8 @@ function loadRoutes(names) {
 }
 
 loadRoutes([
-  'places'
+  'places',
+  'stats'
 ]);
 
 module.exports = router;

@@ -22,10 +22,25 @@
 
 'use strict';
 
-const places = require('./places');
-const stats = require('./stats');
+const { Router } = require('express');
+const asyncHandler = require('express-async-handler');
 
-module.exports = {
-  places,
-  stats
-};
+const { stats } = require('../api/internal');
+
+const router = Router();
+
+router.get('/', asyncHandler(async(req, res) => {
+  const result = await stats.get();
+
+  return res.status(200)
+    .json(result);
+}));
+
+router.links = [
+  {
+    href: '',
+    rel: 'get-stats'
+  }
+];
+
+module.exports = router;

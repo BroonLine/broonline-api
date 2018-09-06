@@ -23,9 +23,17 @@
 'use strict';
 
 const places = require('./places');
-const stats = require('./stats');
+const { version } = require('../../../package.json');
+
+async function get() {
+  const placesStats = await places.getStats();
+
+  return {
+    places: placesStats,
+    version
+  };
+}
 
 module.exports = {
-  places,
-  stats
+  get
 };

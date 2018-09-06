@@ -22,10 +22,33 @@
 
 'use strict';
 
-const places = require('./places');
-const stats = require('./stats');
+function calculateDominant(falseCount, trueCount) {
+  if (falseCount === trueCount) {
+    return null;
+  }
+
+  return trueCount > falseCount;
+}
+
+function summarize(answers) {
+  const result = {
+    false: 0,
+    true: 0
+  };
+
+  answers.forEach((answer) => {
+    const field = answer.answer ? 'true' : 'false';
+
+    result[field]++;
+  });
+
+  result.dominant = calculateDominant(result.false, result.true);
+  result.total = result.false + result.true;
+
+  return result;
+}
 
 module.exports = {
-  places,
-  stats
+  calculateDominant,
+  summarize
 };
