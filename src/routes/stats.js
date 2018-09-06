@@ -42,7 +42,7 @@ router.get('/', asyncHandler(async(req, res) => {
     cache.set(cacheKey, result);
   }
 
-  res.header('Cache-Control', `max-age=${calculateMaxAge(cache, cacheKey)}`);
+  res.header('Cache-Control', `private, max-age=${calculateMaxAge(cache, cacheKey)}`);
 
   return res.status(200)
     .json(result);

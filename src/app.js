@@ -23,6 +23,7 @@
 'use strict';
 
 const compression = require('compression');
+const noSniff = require('dont-sniff-mimetype');
 const express = require('express');
 
 const { isProduction, port } = require('./config');
@@ -39,8 +40,9 @@ const app = express()
   .use(requestLogger())
   .use(compression())
   .use(express.json())
-  .use(cors())
+  .use(noSniff())
   .use(noCache())
+  .use(cors())
   .use('/', routes)
   .use(notFoundHandler())
   .use(errorHandler())
