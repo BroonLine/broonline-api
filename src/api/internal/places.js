@@ -28,7 +28,7 @@ const { builder } = require('../../utils/hateoas');
 const { calculateDominant } = require('../../utils/answers');
 
 async function addAnswer(placeId, answer) {
-  const place = await findById(placeId, { skipExternal: true });
+  const { place } = await findByIdInternal(placeId);
   if (!place) {
     return null;
   }
@@ -41,14 +41,13 @@ async function addAnswer(placeId, answer) {
     .build();
 }
 
-function castDetails(details, options) {
+function castDetails(placeId, details, options = {}) {
   if (!details) {
     return null;
   }
 
   const { location } = details.geometry;
-
-  return new Place({
+  const place = new Place({
     _id: details.place_id,
     answers: options.expand ? [] : null,
     position: {
@@ -66,6 +65,12 @@ function castDetails(details, options) {
       date: null
     }
   });
+
+  if (place.id !== placeId) {
+    place.aliases.push(placeId);
+  }
+
+  return place;
 }
 
 function convertBoundsToPolygon(bounds) {
@@ -84,16 +89,36 @@ function convertBoundsToPolygon(bounds) {
   };
 }
 
-async function find(options = {}) {
-  let query = Place.where('status').equals(options.status || 'ACTIVE');
+function createFindByIdQuery(placeId, options = {}) {
+  const projection = options.expand ? '+answers' : '';
+
+  return Place.findOne({
+    $or: [
+      { _id: placeId },
+      { aliases: placeId }
+    ]
+  }, projection);
+}
+
+function createFindQuery(options = {}) {
+  let query = Place.find();
   if (options.bounds) {
     query = query.where('position').within(convertBoundsToPolygon(options.bounds));
   }
   if (typeof options.dominant !== 'undefined') {
     query = query.where('answerSummary.dominant').equals(options.dominant);
   }
+  if (options.status) {
+    query = query.where('status').equals(options.status);
+  } else {
+    query = query.where('status').ne('DELETED');
+  }
 
-  const places = await query;
+  return query;
+}
+
+async function find(options = {}) {
+  const places = await createFindQuery(options);
 
   return builder()
     .body({
@@ -112,15 +137,9 @@ async function find(options = {}) {
 }
 
 async function findById(placeId, options = {}) {
-  let place = await findByIdOrAlias(placeId, options);
-  const details = !(place || options.skipExternal) || options.expand ? await google.maps.places.findById(placeId) : null;
-
+  const { details, place } = await findByIdInternal(placeId, options);
   if (!place) {
-    place = castDetails(details, options);
-
-    if (!place) {
-      return null;
-    }
+    return null;
   }
 
   return builder()
@@ -143,16 +162,22 @@ async function findById(placeId, options = {}) {
     .build();
 }
 
-function findByIdOrAlias(placeId, options) {
-  const projection = options.expand ? '+answers' : '';
+async function findByIdInternal(placeId, options = {}) {
+  let place = await createFindByIdQuery(placeId, options);
+  const details = !place || options.expand ? await google.maps.places.findById(placeId) : null;
 
-  return Place.findOne({
-    $or: [
-      { _id: placeId },
-      { aliases: placeId }
-    ],
-    status: options.status || 'ACTIVE'
-  }, projection);
+  if (!place) {
+    place = castDetails(placeId, details, options);
+  }
+
+  if (!place || place.status === 'DELETED') {
+    return {};
+  }
+
+  return {
+    details,
+    place
+  };
 }
 
 function getPlaceLinks(place, relations = {}) {
@@ -193,14 +218,14 @@ function getPlacesLinks() {
   ];
 }
 
-async function getStats() {
+async function getStats(options = {}) {
   const answers =  {
     false: 0,
     true: 0
   };
   let total = 0;
 
-  await Place.where('status').equals('ACTIVE')
+  await createFindQuery({ status: options.status })
     .cursor()
     .eachAsync((place) => {
       answers.false += place.answerSummary.false;
