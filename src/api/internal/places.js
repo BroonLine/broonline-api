@@ -28,7 +28,7 @@ const { builder } = require('../../utils/hateoas');
 const { calculateDominant } = require('../../utils/answers');
 
 async function addAnswer(placeId, answer) {
-  const place = await findById(placeId);
+  const place = await findById(placeId, { skipExternal: true });
   if (!place) {
     return null;
   }
@@ -39,22 +39,6 @@ async function addAnswer(placeId, answer) {
     .body(place.toJSON())
     .links(getPlaceLinks(place))
     .build();
-}
-
-function convertBoundsToPolygon(bounds) {
-  const [ x2, y1 ] = bounds.ne;
-  const [ x1, y2 ] = bounds.sw;
-
-  return {
-    type: 'Polygon',
-    coordinates: [[
-      [ x1, y1 ],
-      [ x1, y2 ],
-      [ x2, y2 ],
-      [ x2, y1 ],
-      [ x1, y1 ]
-    ]]
-  };
 }
 
 function castDetails(details, options) {
@@ -74,6 +58,7 @@ function castDetails(details, options) {
         location.lng
       ]
     },
+    status: 'ACTIVE',
     created: {
       date: null
     },
@@ -83,15 +68,29 @@ function castDetails(details, options) {
   });
 }
 
+function convertBoundsToPolygon(bounds) {
+  const [ x2, y1 ] = bounds.ne;
+  const [ x1, y2 ] = bounds.sw;
+
+  return {
+    type: 'Polygon',
+    coordinates: [[
+      [ x1, y1 ],
+      [ x1, y2 ],
+      [ x2, y2 ],
+      [ x2, y1 ],
+      [ x1, y1 ]
+    ]]
+  };
+}
+
 async function find(options = {}) {
-  let query = Place.find();
+  let query = Place.where('status').equals(options.status || 'ACTIVE');
   if (options.bounds) {
-    query = query.where('position')
-      .within(convertBoundsToPolygon(options.bounds));
+    query = query.where('position').within(convertBoundsToPolygon(options.bounds));
   }
   if (typeof options.dominant !== 'undefined') {
-    query = query.where('answerSummary.dominant')
-      .equals(options.dominant);
+    query = query.where('answerSummary.dominant').equals(options.dominant);
   }
 
   const places = await query;
@@ -114,7 +113,7 @@ async function find(options = {}) {
 
 async function findById(placeId, options = {}) {
   let place = await findByIdOrAlias(placeId, options);
-  const details = !place || options.expand ? await google.maps.places.findById(placeId) : null;
+  const details = !(place || options.skipExternal) || options.expand ? await google.maps.places.findById(placeId) : null;
 
   if (!place) {
     place = castDetails(details, options);
@@ -129,10 +128,10 @@ async function findById(placeId, options = {}) {
     .links(getPlaceLinks(place))
     .when(options.expand && details, (b) => {
       b.body({
-        address: details.formatted_address,
-        name: details.name,
-        phoneNumber: details.formatted_phone_number,
-        rating: details.rating
+        address: details.formatted_address || null,
+        name: details.name || null,
+        phoneNumber: details.formatted_phone_number || null,
+        rating: details.rating || null
       });
       b.links([
         {
@@ -144,13 +143,16 @@ async function findById(placeId, options = {}) {
     .build();
 }
 
-async function findByIdOrAlias(placeId, options = {}) {
-  let place = await Place.findById(placeId, options.expand ? '+answers' : '');
-  if (!place) {
-    place = await Place.findOne({ aliases: placeId }, options.expand ? '+answers' : '');
-  }
+function findByIdOrAlias(placeId, options) {
+  const projection = options.expand ? '+answers' : '';
 
-  return place;
+  return Place.findOne({
+    $or: [
+      { _id: placeId },
+      { aliases: placeId }
+    ],
+    status: options.status || 'ACTIVE'
+  }, projection);
 }
 
 function getPlaceLinks(place, relations = {}) {
@@ -185,7 +187,7 @@ function getPlaceLinks(place, relations = {}) {
 function getPlacesLinks() {
   return [
     {
-      href: '/places{?bounds,dominant}',
+      href: '/places{?bounds,dominant,status}',
       rel: 'self'
     }
   ];
@@ -198,12 +200,14 @@ async function getStats() {
   };
   let total = 0;
 
-  await Place.find().cursor().eachAsync((place) => {
-    answers.false += place.answerSummary.false;
-    answers.true += place.answerSummary.true;
+  await Place.where('status').equals('ACTIVE')
+    .cursor()
+    .eachAsync((place) => {
+      answers.false += place.answerSummary.false;
+      answers.true += place.answerSummary.true;
 
-    total++;
-  });
+      total++;
+    });
 
   answers.dominant = calculateDominant(answers.false, answers.true);
   answers.total = answers.false + answers.true;

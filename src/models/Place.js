@@ -49,6 +49,7 @@ const schema = new mongoose.Schema({
   },
   answers: { type: [ answerSchema ], select: false },
   position: { type: pointSchema, required: true },
+  status: { type: String, enum: [ 'ACTIVE', 'DELETED' ], index: true, required: true },
   created: {
     date: { type: Date, default: Date.now }
   },
@@ -63,6 +64,7 @@ const schema = new mongoose.Schema({
         aliases: ret.aliases,
         answerSummary: ret.answerSummary,
         position: ret.position.coordinates,
+        status: ret.status,
         created: ret.created,
         modified: ret.modified
       };

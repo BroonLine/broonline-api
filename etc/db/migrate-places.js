@@ -36,6 +36,7 @@ while (cursor.hasNext()) {
     answerSummary: createAnswerSummary(oldDoc),
     answers: createAnswers(oldDoc),
     position: createPosition(oldDoc),
+    status: 'ACTIVE',
     created: createAudit(oldDoc, 'created'),
     modified: createAudit(oldDoc, 'modified'),
     __v: oldDoc.__v
