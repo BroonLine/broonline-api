@@ -36,7 +36,11 @@ module.exports = () => compose([
     stream: split().on('data', (data) => logger.log('verbose', data))
   }),
   morgan('combined', {
-    skip: (req, res) => res.statusCode < 400,
+    skip: (req, res) => res.statusCode < 400 && res.statusCode >= 500,
     stream: split().on('data', (data) => logger.log('warn', data))
+  }),
+  morgan('combined', {
+    skip: (req, res) => res.statusCode < 500,
+    stream: split().on('data', (data) => logger.log('error', data))
   })
 ]);
