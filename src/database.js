@@ -31,7 +31,7 @@ const dbLogger = getLogger('db');
 const logger = getLogger();
 
 mongoose.set('debug', (collectionName, methodName, ...args) => {
-  dbLogger.log('verbose', 'db.%s.%s(%o...)', collectionName, methodName, args);
+  dbLogger.log('verbose', 'db.%s.%s(%O...)', collectionName, methodName, args);
 });
 mongoose.set('useCreateIndex', true);
 mongoose.set('useNewUrlParser', true);
