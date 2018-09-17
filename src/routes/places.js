@@ -26,12 +26,12 @@
 
 const { Router } = require('express');
 const asyncHandler = require('express-async-handler');
-const { body: checkBody, query: checkQuery, validationResult } = require('express-validator/check');
+const { body: checkBody, query: checkQuery } = require('express-validator/check');
 const { matchedData, sanitizeQuery } = require('express-validator/filter');
 
 const { places } = require('../api/internal');
-const { builder } = require('../utils/hateoas');
 const { isBoolean, toBoolean } = require('../validators');
+const validate = require('../middleware/validate');
 
 const router = Router();
 
@@ -44,6 +44,7 @@ router.get('/', [
 
       return true;
     }),
+  // TODO: Fix how error manifests when not valid boolean
   checkQuery('dominant')
     .optional()
     .custom((value) => isBoolean(value, { nullable: true }))
@@ -52,18 +53,9 @@ router.get('/', [
     .optional()
     .isIn([ 'ACTIVE' ]),
   sanitizeQuery('bounds.*.*')
-    .toFloat()
+    .toFloat(),
+  validate()
 ], asyncHandler(async(req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    const result = builder()
-      .errors(errors.array())
-      .build();
-
-    return res.status(422)
-      .json(result);
-  }
-
   const options = matchedData(req);
   const result = await places.find(options);
 
@@ -75,18 +67,9 @@ router.get('/:placeId', [
   checkQuery('expand')
     .optional()
     .isBoolean()
-    .toBoolean()
+    .toBoolean(),
+  validate()
 ], asyncHandler(async(req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    const result = builder()
-      .errors(errors.array())
-      .build();
-
-    return res.status(422)
-      .json(result);
-  }
-
   const options = matchedData(req);
   const { placeId } = req.params;
 
@@ -102,18 +85,9 @@ router.get('/:placeId', [
 router.post('/:placeId/answers', [
   checkBody('answer')
     .isBoolean()
-    .toBoolean()
+    .toBoolean(),
+  validate()
 ], asyncHandler(async(req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    const result = builder()
-      .errors(errors.array())
-      .build();
-
-    return res.status(422)
-      .json(result);
-  }
-
   const { answer } = matchedData(req);
   const { placeId } = req.params;
 
